@@ -4,7 +4,7 @@ public class ExampleHelloAarch64 {
 
     private static void emitPutChar(CodeAarch64 code, char ch, int callTargetReg, int putStackOffset) {
         code.emitLoadRegister(callTargetReg, CodeAarch64.SP, putStackOffset);
-        code.emitMoveImmediate(0, ch);
+        code.emitMoveImmediate(0, (byte) ch);
         code.emitBranchWithLinkToRegister(callTargetReg);
     }
 
@@ -34,7 +34,7 @@ public class ExampleHelloAarch64 {
         code.emitLoadRegister(9, CodeAarch64.SP, 24); // Load PutLn into x9
         code.emitBranchWithLinkToRegister(9); // Call PutLn
 
-        code.emitMoveImmediate(0, 0); // Return 0 from main
+        code.emitMoveImmediate(0, (byte) 0); // Return 0 from main
 
         code.emitLoadPairOfRegisterPostIndexed(29, 30, CodeAarch64.SP, 48);
 

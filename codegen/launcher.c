@@ -60,13 +60,6 @@ int main(int argc, char* argv[])
 
     // define start to be a function pointer to a function like void start(void* data) that is implemented by the code we just loaded
     void (*start)(void*) = (void (*)(void*))code;
-    
-    // __asm__ volatile (
-    //     "call *%0"
-    //     :
-    //     : "r" (start), "D" (data)
-    //     : "rax", "rcx", "rdx", "rsi", "r8", "r9", "r10", "r11", "memory"
-    // );
     start(data);
 
     /* clean up */
