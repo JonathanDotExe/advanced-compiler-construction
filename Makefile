@@ -8,7 +8,8 @@ JAVA_SRC := codegen/Parser.java \
 	codegen/Code.java \
 	codegen/CodeX8664.java \
 	codegen/CodeAarch64.java \
-	codegen/ExampleHelloAarch64.java
+	codegen/ExampleHelloAarch64.java \
+	codegen/ExampleHelloX8664.java
 
 CLASS_FILES := $(patsubst %.java,bin/%.class,$(JAVA_SRC))
 
