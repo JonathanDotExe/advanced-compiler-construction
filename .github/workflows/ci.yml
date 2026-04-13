@@ -1,0 +1,36 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build-x86-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+      - name: Build and test
+        run: |
+          make
+          ./run-example-codegen.sh
+          cc codegen/launcher.c
+          ./a.out hello-x86_64.bin
+
+  build-arm-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+      - name: Build and test
+        run: |
+          make
+          ./run-example-codegen.sh
+          cc codegen/launcher.c
+          ./a.out hello-aarch64.bin
