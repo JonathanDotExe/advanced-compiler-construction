@@ -15,10 +15,14 @@ FILE_OBJ="${FILE_NAME%.*}.obj"
 if [ "$OS" = "Darwin" ]; then
   echo "Creating Object File: ${FILE_OBJ}"
   as ${FILE_NAME} -o ${FILE_OBJ}
+
   echo "Creating Bin File: ${FILE_BIN}"
   segedit ${FILE_OBJ} -extract __TEXT __text ${FILE_BIN}
 elif [ "$OS" = "Linux" ]; then
+  echo "Creating Object File: ${FILE_OBJ}"
   as -msyntax=intel -mnaked-reg ${FILE_NAME} -o ${FILE_OBJ}
+
+  echo "Creating Bin File: ${FILE_BIN}"
   objcopy -O binary -j .text ${FILE_OBJ} ${FILE_BIN}
 else
   echo "Unsupported OS: $OS"
