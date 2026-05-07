@@ -39,20 +39,55 @@ FnDecl = "fn" ident Parameters "{" {VarDecl} StatSeq "}".
 Parameters = "(" [Param {"," Param}] ")" [":" Type].
 Param = ident ":" Type.
 StatSeq = Statement {Statement}.
+
 Statement =
       ident ( "=" Expression | ActParameters ) ";"
     | "if" "(" Condition ")" "{" StatSeq "}" {"elseif" "(" Condition ")" "{" StatSeq "}" } ["else" "{" StatSeq "}"]
     | "while" "(" Condition ")" "{" StatSeq "}"
     | "return" [Expression] ";"
 .
-Condition = Expression Relop Expression.
-Expression = [Addop] Term {Addop Term}.
-Term = Factor {Mulop Factor}.
-Factor = ident [ActParameters] | number | charCon | "(" Expression ")".
-ActParameters = "(" [Expression {"," Expression}] ")".
-Relop = "=" | "#" | "<" | ">" | ">=" | "<=".
-Addop = "+" | "-".
-Mulop = "*" | "/" | "%".
+
+Condition<out Operand x>  = Expression<out x> Relop<out RelOp op> Expression<out Operand y> (. //TODO comparison .).
+
+Expression<out Operand x> =
+    (. AddOp sign = AddOp.Plus; .)
+    [Addop<out sign>]
+    Term<out Operand x> {Addop<out AddOp op> Term<out Operand term> (. //TODO codegen .)
+    }.
+
+Term<out Operand x> =
+    Factor<out x>
+    {Mulop<out Mulop op> Factor<out Operand y> (. //TODO codegen .)
+    }.
+
+Factor<out Operand x> =
+    ident           (. //TODO variables/function .)
+        [ActParameters]
+    | number        (. x = new Operand(t.numVal;); .)
+    | charCon       (. x = new Operand((char) t.numVal;); .)
+    | "(" Expression<out x> ")".
+
+ActParameters = "(" [Expression {"," Expression}] ")" (. //TODO method call .).
+
+Relop<out RelOp op> =
+    "="     (. op = RelOp.Equals; .)
+    | "#"   (. op = RelOp.NotEquals; .)
+    | "<"   (. op = RelOp.Less; .)
+    | ">"   (. op = RelOp.Greater; .)
+    | ">="  (. op = RelOp.GreaterEquals; .)
+    | "<="  (. op = RelOp.LessEquals; .)
+    .
+
+Addop<out AddOp op> =
+    "+"     (. op = AddOp.Plus; .)
+    | "-"   (. op = AddOp.Minus; .)
+    .
+
+Mulop<out MulOp op> =
+    "*"     (. op = MulOp.Times; .)
+    | "/"   (. op = MulOp.Divide; .)
+    | "%"   (. op = MulOp.Modulo; .)
+    .
 
 
 END SimpleLang.
