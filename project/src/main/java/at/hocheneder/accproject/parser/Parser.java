@@ -1,6 +1,5 @@
 
-package codegen;
-
+package at.hocheneder.accproject.parser;
 public class Parser {
 	public static final int _EOF = 0;
 	public static final int _ident = 1;

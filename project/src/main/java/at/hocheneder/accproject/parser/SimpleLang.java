@@ -1,4 +1,4 @@
-package codegen;
+package at.hocheneder.accproject.parser;
 
 public class SimpleLang {
     public static void main(String[] args) {
