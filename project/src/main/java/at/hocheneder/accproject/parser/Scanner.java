@@ -7,6 +7,8 @@ import java.io.RandomAccessFile;
 import java.util.Map;
 import java.util.HashMap;
 
+import static at.hocheneder.accproject.parser.Token.Kind.*;
+
 class Token {
 	public int kind;    // token kind
 	public int pos;     // token position in bytes in the source text (starting at 0)
@@ -15,6 +17,40 @@ class Token {
 	public int line;    // token line (starting at 1)
 	public String val;  // token value
 	public Token next;  // ML 2005-03-11 Peek tokens are kept in linked list
+
+	static class Kind {
+
+		public static final int TOKEN_EOF = 0;
+		public static final int TOKEN_IDENT = 1;
+		public static final int TOKEN_NUMBER = 2;
+		public static final int TOKEN_CHARCON = 3;
+		public static final int TOKEN_VAR = 4;
+		public static final int TOKEN_COLON = 5;
+		public static final int TOKEN_SEMICOLON = 6;
+		public static final int TOKEN_FN = 7;
+		public static final int TOKEN_LBRACE = 8;
+		public static final int TOKEN_RBRACE = 9;
+		public static final int TOKEN_LPAREN = 10;
+		public static final int TOKEN_COMMA = 11;
+		public static final int TOKEN_RPAREN = 12;
+		public static final int TOKEN_EQUALS = 13;
+		public static final int TOKEN_IF = 14;
+		public static final int TOKEN_ELSEIF = 15;
+		public static final int TOKEN_ELSE = 16;
+		public static final int TOKEN_WHILE = 17;
+		public static final int TOKEN_RETURN = 18;
+		public static final int TOKEN_NOT_EQUALS = 19;
+		public static final int TOKEN_LESS = 20;
+		public static final int TOKEN_GREATER = 21;
+		public static final int TOKEN_GREATER_EQUALS = 22;
+		public static final int TOKEN_LESS_EQUALS = 23;
+		public static final int TOKEN_PLUS = 24;
+		public static final int TOKEN_MINUS = 25;
+		public static final int TOKEN_TIMES = 26;
+		public static final int TOKEN_DIVIDE = 27;
+		public static final int TOKEN_MODULO = 28;
+	}
+
 }
 
 //-----------------------------------------------------------------------------------
@@ -245,8 +281,10 @@ class StartStates {
 // Scanner
 //-----------------------------------------------------------------------------------
 public class Scanner {
+
 	static final char EOL = '\n';
-	static final int  eofSym = 0;
+
+	static final int eofSym = TOKEN_EOF;
 	static final int maxT = 29;
 	static final int noSym = 29;
 
@@ -261,7 +299,7 @@ public class Scanner {
 	int line;          // line number of current character
 	int oldEols;       // EOLs that appeared in a comment;
 	static final StartStates start; // maps initial token character to start state
-	static final Map literals;      // maps literal strings to literal kinds
+	static final Map<String, Integer> literals;      // maps literal strings to literal kinds
 
 	Token tokens;      // list of tokens already peeked (first token is a dummy)
 	Token pt;          // current peek token
@@ -271,31 +309,36 @@ public class Scanner {
 
 
 	static {
+
 		start = new StartStates();
-		literals = new HashMap();
+		literals = new HashMap<>();
+
 		for (int i = 36; i <= 36; ++i) start.set(i, 1);
 		for (int i = 65; i <= 90; ++i) start.set(i, 1);
 		for (int i = 95; i <= 95; ++i) start.set(i, 1);
 		for (int i = 97; i <= 122; ++i) start.set(i, 1);
+
 		for (int i = 48; i <= 48; ++i) start.set(i, 3);
 		for (int i = 49; i <= 57; ++i) start.set(i, 2);
-		start.set(39, 4); 
-		start.set(58, 8); 
-		start.set(59, 9); 
-		start.set(123, 10); 
-		start.set(125, 11); 
-		start.set(40, 12); 
-		start.set(44, 13); 
-		start.set(41, 14); 
-		start.set(61, 15); 
-		start.set(35, 16); 
-		start.set(60, 24); 
-		start.set(62, 25); 
-		start.set(43, 19); 
-		start.set(45, 20); 
-		start.set(42, 21); 
-		start.set(47, 22); 
-		start.set(37, 23); 
+
+		start.set(39, 4);
+		start.set(58, 8);
+		start.set(59, 9);
+		start.set(123, 10);
+		start.set(125, 11);
+		start.set(40, 12);
+		start.set(44, 13);
+		start.set(41, 14);
+		start.set(61, 15);
+		start.set(35, 16);
+		start.set(60, 24);
+		start.set(62, 25);
+		start.set(43, 19);
+		start.set(45, 20);
+		start.set(42, 21);
+		start.set(47, 22);
+		start.set(37, 23);
+
 		start.set(Buffer.EOF, -1);
 		literals.put("var", 4);
 		literals.put("fn", 7);
@@ -306,17 +349,17 @@ public class Scanner {
 		literals.put("return", 18);
 
 	}
-	
+
 	public Scanner (String fileName) {
 		buffer = new Buffer(fileName);
 		Init();
 	}
-	
+
 	public Scanner(InputStream s) {
 		buffer = new Buffer(s);
 		Init();
 	}
-	
+
 	void Init () {
 		pos = -1; line = 1; col = 0; charPos = -1;
 		oldEols = 0;
@@ -332,7 +375,7 @@ public class Scanner {
 		}
 		pt = tokens = new Token();  // first token is a dummy
 	}
-	
+
 	void NextCh() {
 		if (oldEols > 0) { ch = EOL; oldEols--; }
 		else {
@@ -346,7 +389,7 @@ public class Scanner {
 		}
 
 	}
-	
+
 	void AddCh() {
 		if (tlen >= tval.length) {
 			char[] newBuf = new char[2 * tval.length];
@@ -408,111 +451,267 @@ public class Scanner {
 		String val = t.val;
 
 		Object kind = literals.get(val);
+
 		if (kind != null) {
 			t.kind = ((Integer) kind).intValue();
 		}
 	}
 
 	Token NextToken() {
-		while (ch == ' ' ||
-			ch >= 9 && ch <= 10 || ch == 13
-		) NextCh();
-		if (ch == '/' && Comment0() ||ch == '/' && Comment1()) return NextToken();
+
+		while (ch == ' ' || ch >= 9 && ch <= 10 || ch == 13) {
+			NextCh();
+		}
+
+		if (ch == '/' && Comment0() || ch == '/' && Comment1()) {
+			return NextToken();
+		}
+
 		int recKind = noSym;
 		int recEnd = pos;
-		t = new Token();
-		t.pos = pos; t.col = col; t.line = line; t.charPos = charPos;
-		int state = start.state(ch);
-		tlen = 0; AddCh();
 
-		loop: for (;;) {
+		t = new Token();
+		t.pos = pos;
+		t.col = col;
+		t.line = line;
+		t.charPos = charPos;
+
+		int state = start.state(ch);
+
+		tlen = 0;
+		AddCh();
+
+		loop:
+		for (;;) {
 			switch (state) {
-				case -1: { t.kind = eofSym; break loop; } // NextCh already done 
+
+				case -1: {
+					t.kind = eofSym;
+					break loop;
+				}
+
 				case 0: {
 					if (recKind != noSym) {
 						tlen = recEnd - t.pos;
 						SetScannerBehindT();
 					}
-					t.kind = recKind; break loop;
-				} // NextCh already done
-				case 1:
-					recEnd = pos; recKind = 1;
-					if (ch == '$' || ch >= '0' && ch <= '9' || ch >= 'A' && ch <= 'Z' || ch == '_' || ch >= 'a' && ch <= 'z') {AddCh(); state = 1; break;}
-					else {t.kind = 1; t.val = new String(tval, 0, tlen); CheckLiteral(); return t;}
-				case 2:
-					recEnd = pos; recKind = 2;
-					if (ch >= '0' && ch <= '9') {AddCh(); state = 2; break;}
-					else {t.kind = 2; break loop;}
-				case 3:
-					{t.kind = 2; break loop;}
-				case 4:
-					if (ch <= 9 || ch >= 11 && ch <= 12 || ch >= 14 && ch <= '&' || ch >= '(' && ch <= '[' || ch >= ']' && ch <= 65535) {AddCh(); state = 5; break;}
-					else if (ch == 92) {AddCh(); state = 6; break;}
-					else {state = 0; break;}
-				case 5:
-					if (ch == 39) {AddCh(); state = 7; break;}
-					else {state = 0; break;}
-				case 6:
-					if (ch == '"' || ch == 39 || ch == 92 || ch == 'b' || ch == 'f' || ch == 'n' || ch == 'r' || ch == 't') {AddCh(); state = 5; break;}
-					else {state = 0; break;}
-				case 7:
-					{t.kind = 3; break loop;}
-				case 8:
-					{t.kind = 5; break loop;}
-				case 9:
-					{t.kind = 6; break loop;}
-				case 10:
-					{t.kind = 8; break loop;}
-				case 11:
-					{t.kind = 9; break loop;}
-				case 12:
-					{t.kind = 10; break loop;}
-				case 13:
-					{t.kind = 11; break loop;}
-				case 14:
-					{t.kind = 12; break loop;}
-				case 15:
-					{t.kind = 13; break loop;}
-				case 16:
-					{t.kind = 19; break loop;}
-				case 17:
-					{t.kind = 22; break loop;}
-				case 18:
-					{t.kind = 23; break loop;}
-				case 19:
-					{t.kind = 24; break loop;}
-				case 20:
-					{t.kind = 25; break loop;}
-				case 21:
-					{t.kind = 26; break loop;}
-				case 22:
-					{t.kind = 27; break loop;}
-				case 23:
-					{t.kind = 28; break loop;}
-				case 24:
-					recEnd = pos; recKind = 20;
-					if (ch == '=') {AddCh(); state = 18; break;}
-					else {t.kind = 20; break loop;}
-				case 25:
-					recEnd = pos; recKind = 21;
-					if (ch == '=') {AddCh(); state = 17; break;}
-					else {t.kind = 21; break loop;}
 
+					t.kind = recKind;
+					break loop;
+				}
+
+				case 1:
+					recEnd = pos;
+					recKind = TOKEN_IDENT;
+
+					if (ch == '$' || ch >= '0' && ch <= '9'
+							|| ch >= 'A' && ch <= 'Z'
+							|| ch == '_'
+							|| ch >= 'a' && ch <= 'z') {
+
+						AddCh();
+						state = 1;
+						break;
+
+					} else {
+						t.kind = TOKEN_IDENT;
+						t.val = new String(tval, 0, tlen);
+						CheckLiteral();
+						return t;
+					}
+
+				case 2:
+					recEnd = pos;
+					recKind = TOKEN_NUMBER;
+
+					if (ch >= '0' && ch <= '9') {
+						AddCh();
+						state = 2;
+						break;
+					} else {
+						t.kind = TOKEN_NUMBER;
+						break loop;
+					}
+
+				case 3: {
+					t.kind = TOKEN_NUMBER;
+					break loop;
+				}
+
+				case 4:
+					if (ch <= 9 || ch >= 11 && ch <= 12 || ch >= 14 && ch <= '&'
+							|| ch >= '(' && ch <= '['
+							|| ch >= ']' && ch <= 65535) {
+
+						AddCh();
+						state = 5;
+						break;
+
+					} else if (ch == 92) {
+						AddCh();
+						state = 6;
+						break;
+
+					} else {
+						state = 0;
+						break;
+					}
+
+				case 5:
+					if (ch == 39) {
+						AddCh();
+						state = 7;
+						break;
+					} else {
+						state = 0;
+						break;
+					}
+
+				case 6:
+					if (ch == '"' || ch == 39 || ch == 92 || ch == 'b'
+							|| ch == 'f' || ch == 'n'
+							|| ch == 'r' || ch == 't') {
+
+						AddCh();
+						state = 5;
+						break;
+
+					} else {
+						state = 0;
+						break;
+					}
+
+				case 7: {
+					t.kind = TOKEN_CHARCON;
+					break loop;
+				}
+
+				case 8: {
+					t.kind = TOKEN_COLON;
+					break loop;
+				}
+
+				case 9: {
+					t.kind = TOKEN_SEMICOLON;
+					break loop;
+				}
+
+				case 10: {
+					t.kind = TOKEN_LBRACE;
+					break loop;
+				}
+
+				case 11: {
+					t.kind = TOKEN_RBRACE;
+					break loop;
+				}
+
+				case 12: {
+					t.kind = TOKEN_LPAREN;
+					break loop;
+				}
+
+				case 13: {
+					t.kind = TOKEN_COMMA;
+					break loop;
+				}
+
+				case 14: {
+					t.kind = TOKEN_RPAREN;
+					break loop;
+				}
+
+				case 15: {
+					t.kind = TOKEN_EQUALS;
+					break loop;
+				}
+
+				case 16: {
+					t.kind = TOKEN_NOT_EQUALS;
+					break loop;
+				}
+
+				case 17: {
+					t.kind = TOKEN_GREATER_EQUALS;
+					break loop;
+				}
+
+				case 18: {
+					t.kind = TOKEN_LESS_EQUALS;
+					break loop;
+				}
+
+				case 19: {
+					t.kind = TOKEN_PLUS;
+					break loop;
+				}
+
+				case 20: {
+					t.kind = TOKEN_MINUS;
+					break loop;
+				}
+
+				case 21: {
+					t.kind = TOKEN_TIMES;
+					break loop;
+				}
+
+				case 22: {
+					t.kind = TOKEN_DIVIDE;
+					break loop;
+				}
+
+				case 23: {
+					t.kind = TOKEN_MODULO;
+					break loop;
+				}
+
+				case 24:
+					recEnd = pos;
+					recKind = TOKEN_LESS;
+
+					if (ch == '=') {
+						AddCh();
+						state = 18;
+						break;
+					} else {
+						t.kind = TOKEN_LESS;
+						break loop;
+					}
+
+				case 25:
+					recEnd = pos;
+					recKind = TOKEN_GREATER;
+
+					if (ch == '=') {
+						AddCh();
+						state = 17;
+						break;
+					} else {
+						t.kind = TOKEN_GREATER;
+						break loop;
+					}
 			}
 		}
+
 		t.val = new String(tval, 0, tlen);
 		return t;
 	}
-	
+
 	private void SetScannerBehindT() {
 		buffer.setPos(t.pos);
 		NextCh();
-		line = t.line; col = t.col; charPos = t.charPos;
-		for (int i = 0; i < tlen; i++) NextCh();
+		line = t.line;
+		col = t.col;
+		charPos = t.charPos;
+
+		for (int i = 0; i < tlen; i++) {
+			NextCh();
+		}
 	}
 	
 	// get the next token (possibly a token already seen during peeking)
-	public Token Scan () {
+	public Token Scan() {
 		if (tokens.next == null) {
 			return NextToken();
 		} else {
@@ -522,11 +721,12 @@ public class Scanner {
 	}
 
 	// get the next token, ignore pragmas
-	public Token Peek () {
+	public Token Peek() {
 		do {
 			if (pt.next == null) {
 				pt.next = NextToken();
 			}
+
 			pt = pt.next;
 		} while (pt.kind > maxT); // skip pragmas
 
