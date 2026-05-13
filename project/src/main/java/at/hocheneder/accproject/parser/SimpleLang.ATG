@@ -40,34 +40,39 @@ Parameters = "(" [Param {"," Param}] ")" [":" Type].
 Param = ident ":" Type.
 StatSeq = Statement {Statement}.
 
-Statement =
-      ident ( "=" Expression | ActParameters ) ";"
-    | "if" "(" Condition ")" "{" StatSeq "}" {"elseif" "(" Condition ")" "{" StatSeq "}" } ["else" "{" StatSeq "}"]
-    | "while" "(" Condition ")" "{" StatSeq "}"
-    | "return" [Expression] ";"
-.
-
-Condition<out Operand x>  = Expression<out x> Relop<out RelOp op> Expression<out Operand y> (. //TODO comparison .).
-
 Expression<out Operand x> =
     (. AddOp sign = AddOp.Plus; .)
     [Addop<out sign>]
-    Term<out Operand x> {Addop<out AddOp op> Term<out Operand term> (. //TODO codegen .)
-    }.
+    Term<out x> {Addop<out AddOp op> Term<out Operand y>
+    }
+.
+
+Statement =
+      ident ( "=" Expression<out Operand x> | ActParameters ) ";"
+    | "if" "(" Condition<out Operand x> ")" "{" StatSeq "}" {"elseif" "(" Condition<out Operand x> ")" "{" StatSeq "}" } ["else" "{" StatSeq "}"]
+    | "while" "(" Condition<out Operand x> ")" "{" StatSeq "}"
+    | "return" [Expression<out Operand x>] ";"
+.
+
+Condition<out Operand x> =
+    Expression<out x>
+    Relop<out RelOp op>
+    Expression<out Operand y>
+.
 
 Term<out Operand x> =
     Factor<out x>
-    {Mulop<out Mulop op> Factor<out Operand y> (. //TODO codegen .)
+    {Mulop<out MulOp op> Factor<out Operand y> (. /* TODO codegen */ .)
     }.
 
 Factor<out Operand x> =
-    ident           (. //TODO variables/function .)
+    ident           (. /* TODO variables/function */ .)
         [ActParameters]
     | number        (. x = new Operand(t.numVal;); .)
     | charCon       (. x = new Operand((char) t.numVal;); .)
     | "(" Expression<out x> ")".
 
-ActParameters = "(" [Expression {"," Expression}] ")" (. //TODO method call .).
+ActParameters = "(" [Expression<out Operand x> {"," Expression<out Operand y>}] ")" (. /* TODO method call */ .).
 
 Relop<out RelOp op> =
     "="     (. op = RelOp.Equals; .)

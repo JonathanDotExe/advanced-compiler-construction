@@ -1,10 +1,5 @@
 
-package at.hocheneder.accproject.parser;
-
-import at.hocheneder.accproject.symtab.op.AddOp;
-import at.hocheneder.accproject.symtab.op.MulOp;
-import at.hocheneder.accproject.symtab.op.Operand;
-import at.hocheneder.accproject.symtab.op.RelOp;
+package codegen;
 
 public class Parser {
 	public static final int _EOF = 0;
@@ -157,7 +152,7 @@ public class Parser {
 			Get();
 			if (la.kind == 13) {
 				Get();
-				Operand x = Expression();
+				Expression();
 			} else if (la.kind == 10) {
 				ActParameters();
 			} else SynErr(31);
@@ -173,7 +168,7 @@ public class Parser {
 			while (la.kind == 15) {
 				Get();
 				Expect(10);
-				Operand y = Condition();
+				Operand x = Condition();
 				Expect(12);
 				Expect(8);
 				StatSeq();
@@ -196,56 +191,31 @@ public class Parser {
 		} else if (la.kind == 18) {
 			Get();
 			if (StartOf(2)) {
-				Operand x = Expression();
+				Expression();
 			}
 			Expect(6);
 		} else SynErr(32);
 	}
 
-	Operand Expression() {
-		Operand  x;
-		AddOp sign = AddOp.Plus;
+	void Expression() {
+		AddOp sign = AddOp.Plus; 
 		if (la.kind == 24 || la.kind == 25) {
 			sign = Addop();
 		}
-		x = Term();
+		Operand x = Term();
 		while (la.kind == 24 || la.kind == 25) {
 			AddOp op = Addop();
 			Operand y = Term();
 		}
-		return x;
-	}
-
-	AddOp  Addop() {
-		AddOp  op;
-		if (la.kind == 24) {
-			Get();
-			op = AddOp.Plus; 
-		} else if (la.kind == 25) {
-			Get();
-			op = AddOp.Minus; 
-		} else SynErr(33);
-		return op;
-	}
-
-	Operand  Term() {
-		Operand  x;
-		x = Factor();
-		while (la.kind == 26 || la.kind == 27 || la.kind == 28) {
-			MulOp op = Mulop();
-			Operand y = Factor();
-			
-		}
-		return x;
 	}
 
 	void ActParameters() {
 		Expect(10);
 		if (StartOf(2)) {
-			Operand x = Expression();
+			Expression();
 			while (la.kind == 11) {
 				Get();
-				Operand y = Expression();
+				Expression();
 			}
 		}
 		Expect(12);
@@ -254,13 +224,13 @@ public class Parser {
 
 	Operand  Condition() {
 		Operand  x;
-		x = Expression();
+		Expression();
 		RelOp op = Relop();
-		Operand y = Expression();
+		Expression();
 		return x;
 	}
 
-	RelOp Relop() {
+	RelOp  Relop() {
 		RelOp  op;
 		switch (la.kind) {
 		case 13: {
@@ -293,9 +263,32 @@ public class Parser {
 			op = RelOp.LessEquals; 
 			break;
 		}
-		default: SynErr(34); break;
+		default: SynErr(33); break;
 		}
 		return op;
+	}
+
+	AddOp  Addop() {
+		AddOp  op;
+		if (la.kind == 24) {
+			Get();
+			op = AddOp.Plus; 
+		} else if (la.kind == 25) {
+			Get();
+			op = AddOp.Minus; 
+		} else SynErr(34);
+		return op;
+	}
+
+	Operand  Term() {
+		Operand  x;
+		x = Factor();
+		while (la.kind == 26 || la.kind == 27 || la.kind == 28) {
+			MulOp op = Mulop();
+			Operand y = Factor();
+			
+		}
+		return x;
 	}
 
 	Operand  Factor() {
@@ -308,20 +301,20 @@ public class Parser {
 			}
 		} else if (la.kind == 2) {
 			Get();
-			x = new Operand(Integer.parseInt(t.val));
+			x = new Operand(t.numVal;); 
 		} else if (la.kind == 3) {
 			Get();
-			x = new Operand(t.val.charAt(0));
+			x = new Operand((char) t.numVal;); 
 		} else if (la.kind == 10) {
 			Get();
-			x = Expression();
+			Expression();
 			Expect(12);
 		} else SynErr(35);
 		return x;
 	}
 
-	MulOp Mulop() {
-		MulOp op = ;
+	MulOp  Mulop() {
+		MulOp  op;
 		if (la.kind == 26) {
 			Get();
 			op = MulOp.Times; 
@@ -408,8 +401,8 @@ class Errors {
 			case 30: s = "invalid Declaration"; break;
 			case 31: s = "invalid Statement"; break;
 			case 32: s = "invalid Statement"; break;
-			case 33: s = "invalid Addop"; break;
-			case 34: s = "invalid Relop"; break;
+			case 33: s = "invalid Relop"; break;
+			case 34: s = "invalid Addop"; break;
 			case 35: s = "invalid Factor"; break;
 			case 36: s = "invalid Mulop"; break;
 			default: s = "error " + n; break;
