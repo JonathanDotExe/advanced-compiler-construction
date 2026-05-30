@@ -1,5 +1,6 @@
 package at.hocheneder.accproject.parser;
 
+import at.hocheneder.accproject.codegen.CodeX8664;
 import at.hocheneder.accproject.symtab.op.AddOp;
 import at.hocheneder.accproject.symtab.op.MulOp;
 import at.hocheneder.accproject.symtab.op.Operand;
@@ -27,15 +28,18 @@ public class Parser {
 	static final boolean _x = false;
 	static final int minErrDist = 2;
 
-	public Token t;    // last recognized token
-	public Token la;   // lookahead token
+	private Token t;    // last recognized token
+	private Token la;   // lookahead token
 	int errDist = minErrDist;
 
-	public Scanner scanner;
-	public Errors errors;
+	private Scanner scanner;
 
-	public Parser(Scanner scanner) {
+	private CodeX8664 code;
+	private Errors errors;
+
+	public Parser(Scanner scanner, CodeX8664 code) {
 		this.scanner = scanner;
+		this.code = code;
 		errors = new Errors();
 	}
 

@@ -19,15 +19,21 @@ public class Operand {
     int T; // Cond: head of TJMP list
     int F; // Cond: head of FJMP list
 
+    // int const
     public Operand(int val) {
         kind = Kind.Con;
         type = SymbolTable.intType;
         this.val = val;
     }
 
+    // char const
     public Operand(char val) {
         kind = Kind.Con;
         type = SymbolTable.charType;
         this.val = val;
+    }
+
+    public Operand() {
+
     }
 }

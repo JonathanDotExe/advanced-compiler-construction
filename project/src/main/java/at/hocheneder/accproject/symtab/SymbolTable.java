@@ -10,7 +10,13 @@ public class SymbolTable {
 
 
     private Scope curScope;
+
+    public int getCurLevel() {
+        return curLevel;
+    }
+
     private int curLevel;
+
     public Obj insert (String name, Obj.Kind kind, Struct type) {
         // Exercise UE-P-4
         if (curScope.findLocal(name) != null) {
@@ -27,6 +33,7 @@ public class SymbolTable {
 
         return obj;
     }
+
     public Obj find (String name) {
         Obj obj = curScope.findGlobal(name);
         if (obj != null) {
