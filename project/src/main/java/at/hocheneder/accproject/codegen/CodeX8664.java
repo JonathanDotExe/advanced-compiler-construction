@@ -165,6 +165,63 @@ public class CodeX8664 extends Code {
     }
 
     // Emit code
+    void emitOpds(int reg, Operand x) {
+        //----- put modrm byte
+        int rm, mod;
+        if (x.inx == NO_REG) {
+            switch (x.kind) {
+                case Operand.Kind.Abs:
+                    mod = 0;
+                    rm = 5;
+                    break;
+                case Operand.Kind.Reg:
+                    mod = 3;
+                    rm = x.reg;
+                    break;
+                case Operand.Kind.RegRel:
+                    if (x.reg != RSP) {
+                        mod = mod(x.adr);
+                        rm = x.reg;
+                    }
+                    else {
+                        throw new RuntimeException("RSP not allowed"); //TODO
+                    }
+                    break;
+                default:
+                    throw new RuntimeException("Operand must have inx");
+            }
+        } else { // indexed
+            assert x.inx != RSP && (x.kind == Operand.Kind.Abs || x.kind == Operand.Kind.RegRel);
+            rm = 4;
+            if (x.kind == Operand.Kind.RegRel) {
+                mod = mod(x.adr);
+            } else { // x.kind == Opd.Abs
+                mod = 0;
+                x.reg = RBP;
+            }
+        }
+        emit((byte) ((mod << 6) + (reg << 3) + rm));
+
+        //----- put SIB byte
+        if (x.inx != NO_REG) {
+            emit((byte) ((x.scale << 6) + (x.inx << 3) + x.reg));
+        }
+        //----- put displacement
+        if (mod == 0 && rm == 5) emitInstruction(x.adr); // absolute address
+        else if (mod == 0 && rm == 4 && x.reg == RBP) emitInstruction(x.adr); // absolute indexed
+        else if (mod == 1) emit((byte) x.adr);
+        else if (mod == 2) emitInstruction(x.adr);
+
+        //TODO assembly codegen
+        //TODO refactor to use existing emit methods
+    }
+
+    public int mod(int n) {
+        if (n == 0) return 0;
+        else if (n >= -128 && n < 127) return 1;
+        else return 2;
+    }
+
 	public void emitMoveImmediate(int register, byte imm) {
 		assembly.append("mov ").append(registerName(register)).append(", ").append(imm).append("\n");
 

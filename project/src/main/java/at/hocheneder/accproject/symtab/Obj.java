@@ -4,7 +4,14 @@ import java.util.Map;
 
 public class Obj {
 
-    public enum Kind { Con, Type, Var, ValPar, Proc }
+    public enum Kind {
+        Con,    // constant value
+        Type,   // type (int, char the lang doesnt support more)
+        Var,    // variable
+        ValPar, // pass by value parameter
+        Proc    // function
+    }
+
     public final String name;
     public final Kind kind;
     public final Struct type;

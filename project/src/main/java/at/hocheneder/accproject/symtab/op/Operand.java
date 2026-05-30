@@ -6,7 +6,12 @@ import at.hocheneder.accproject.symtab.SymbolTable;
 public class Operand {
 
     public enum Kind {
-        Con, Abs, Reg, RegRel, Fun, Cond;
+        Con,    // constant value
+        Abs,    // absolute adress
+        Reg,    // register
+        RegRel, // adress relative to register value
+        Fun,
+        Cond;
     };
     public Kind kind; // Con, Abs, Reg, RegRel, Fun, Cond
     public Struct type;
