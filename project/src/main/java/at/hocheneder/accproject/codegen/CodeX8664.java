@@ -19,7 +19,7 @@ public class CodeX8664 extends Code {
 
     private final Set<Integer> usedRegisters = new HashSet<>();
 
-    private final SymbolTable tab;
+    public final SymbolTable tab;
 
     public CodeX8664(SymbolTable tab) {
         this.tab = tab;
@@ -170,15 +170,15 @@ public class CodeX8664 extends Code {
         int rm, mod;
         if (x.inx == NO_REG) {
             switch (x.kind) {
-                case Operand.Kind.Abs:
+                case Abs:
                     mod = 0;
                     rm = 5;
                     break;
-                case Operand.Kind.Reg:
+                case Reg:
                     mod = 3;
                     rm = x.reg;
                     break;
-                case Operand.Kind.RegRel:
+                case RegRel:
                     if (x.reg != RSP) {
                         mod = mod(x.adr);
                         rm = x.reg;

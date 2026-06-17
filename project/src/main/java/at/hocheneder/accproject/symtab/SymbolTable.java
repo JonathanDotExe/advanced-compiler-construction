@@ -8,14 +8,66 @@ public class SymbolTable {
     public static final Struct charType = new Struct(Struct.Kind.Char);
     public final Obj noObj = new Obj("noObj", Obj.Kind.Var, noType);
 
+    public final Obj chrObj;
+    public final Obj ordObj;
+    public final Obj putObj;
+    public final Obj putLnObj;
 
-    private Scope curScope;
+    public Scope curScope;
 
     public int getCurLevel() {
         return curLevel;
     }
 
     private int curLevel;
+
+
+    public SymbolTable() {
+        // construct universe
+        openScope();
+
+        insert("int", Obj.Kind.Type, intType);
+        insert("char", Obj.Kind.Type, charType);
+
+        //CHR
+        chrObj = new Obj("CHR", Obj.Kind.Proc, charType);
+        openScope();
+        Obj iVarObj = insert("i", Obj.Kind.Var, intType);
+        iVarObj.level = 1;
+        chrObj.nPars = curScope.nVars();
+        chrObj.nVars = curScope.nVars();
+        chrObj.locals = curScope.locals();
+        closeScope();
+
+        //Ord
+        ordObj = new Obj("ORD", Obj.Kind.Proc, intType);
+        openScope();
+        Obj chVarObj = insert("ch", Obj.Kind.Var, charType);
+        chVarObj.level = 1;
+        ordObj.nPars = curScope.nVars();
+        ordObj.nVars = curScope.nVars();
+        ordObj.locals = curScope.locals();
+        closeScope();
+
+        //Put
+        putObj = new Obj("put", Obj.Kind.Proc, noType);
+        openScope();
+        Obj eVarObj = insert("e", Obj.Kind.Var, charType);
+        eVarObj.level = 1;
+        putObj.nPars = curScope.nVars();
+        putObj.nVars = curScope.nVars();
+        putObj.locals = curScope.locals();
+        closeScope();
+
+        //Put ln
+        putLnObj = new Obj("putLn", Obj.Kind.Proc, noType);
+        openScope();
+        putLnObj.nPars = curScope.nVars();
+        putLnObj.nVars = curScope.nVars();
+        putLnObj.locals = curScope.locals();
+        closeScope();
+
+    }
 
     public Obj insert (String name, Obj.Kind kind, Struct type) {
         // Exercise UE-P-4

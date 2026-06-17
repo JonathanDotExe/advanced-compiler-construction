@@ -1,6 +1,9 @@
 package at.hocheneder.accproject.parser;
 
 import at.hocheneder.accproject.codegen.CodeX8664;
+import at.hocheneder.accproject.symtab.Obj;
+import at.hocheneder.accproject.symtab.Struct;
+import at.hocheneder.accproject.symtab.SymbolTable;
 import at.hocheneder.accproject.symtab.op.AddOp;
 import at.hocheneder.accproject.symtab.op.MulOp;
 import at.hocheneder.accproject.symtab.op.Operand;
@@ -35,11 +38,13 @@ public class Parser {
 	private final Scanner scanner;
 
 	private final CodeX8664 code;
+	private final SymbolTable tab;
 	private final Errors errors;
 
 	public Parser(Scanner scanner, CodeX8664 code) {
 		this.scanner = scanner;
 		this.code = code;
+		this.tab = code.tab;
 		errors = new Errors();
 	}
 
@@ -114,28 +119,47 @@ public class Parser {
 	void VarDecl() {
 		Expect(TOKEN_VAR);
 		Expect(TOKEN_IDENT);
+		String name = t.val;
 		Expect(TOKEN_COLON);
-		Type();
+		Struct type = Type();
+		tab.insert(name, Obj.Kind.Var, type);
+
 		Expect(TOKEN_SEMICOLON);
 	}
 
 	void FnDecl() {
 		Expect(TOKEN_FN);
 		Expect(TOKEN_IDENT);
-		Parameters();
+		String name = t.val;
+		Obj meth = tab.insert(name, Obj.Kind.Proc, SymbolTable.noType);
+
+		tab.openScope();
+
+		meth.type = Parameters();
+		meth.nPars = tab.curScope.nVars();
 		Expect(TOKEN_LBRACE);
 		while (la.kind == TOKEN_VAR) {
 			VarDecl();
 		}
+		meth.locals = tab.curScope.locals();
+		meth.nVars = tab.curScope.nVars();
+
 		StatSeq();
 		Expect(TOKEN_RBRACE);
+
+		tab.closeScope();
 	}
 
-	void Type() {
+	Struct Type() {
 		Expect(TOKEN_IDENT);
+		Obj obj = tab.find(t.val);
+		if (obj == null || obj.kind != Obj.Kind.Type) {
+			throw new RuntimeException("Type not found"); //FIXME
+		}
+		return obj.type;
 	}
 
-	void Parameters() {
+	Struct Parameters() {
 		Expect(TOKEN_LPAREN);
 		if (la.kind == TOKEN_IDENT) {
 			Param();
@@ -147,8 +171,9 @@ public class Parser {
 		Expect(TOKEN_RPAREN);
 		if (la.kind == TOKEN_COLON) {
 			Get();
-			Type();
+			return Type();
 		}
+		return SymbolTable.noType;
 	}
 
 	void StatSeq() {
@@ -160,21 +185,27 @@ public class Parser {
 
 	void Param() {
 		Expect(TOKEN_IDENT);
+		String name = t.val;
 		Expect(TOKEN_COLON);
-		Type();
+		Struct type = Type();
+
+		tab.insert(name, Obj.Kind.Var, type); //TODO use ValPar?
 	}
 
 	void Statement() {
 		if (la.kind == TOKEN_IDENT) {
 			Get();
 			if (la.kind == TOKEN_EQUALS) {
+				//Assignment
 				Get();
 				Operand x = Expression();
 			} else if (la.kind == TOKEN_LPAREN) {
+				//Function call
 				ActParameters();
 			} else SynErr(ERROR_INVALID_STATEMENT_ASSIGNMENT);
 			Expect(TOKEN_SEMICOLON);
 		} else if (la.kind == TOKEN_IF) {
+			//If
 			Get();
 			Expect(TOKEN_LPAREN);
 			Operand x = Condition();
@@ -198,6 +229,7 @@ public class Parser {
 				Expect(TOKEN_RBRACE);
 			}
 		} else if (la.kind == TOKEN_WHILE) {
+			//While
 			Get();
 			Expect(TOKEN_LPAREN);
 			Operand x = Condition();
@@ -206,6 +238,7 @@ public class Parser {
 			StatSeq();
 			Expect(TOKEN_RBRACE);
 		} else if (la.kind == TOKEN_RETURN) {
+			// Return
 			Get();
 			if (StartOf(2)) {
 				Operand x = Expression();

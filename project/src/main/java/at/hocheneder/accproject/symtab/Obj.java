@@ -8,13 +8,13 @@ public class Obj {
         Con,    // constant value
         Type,   // type (int, char the lang doesnt support more)
         Var,    // variable
-        ValPar, // pass by value parameter
+        //ValPar, // pass by value parameter
         Proc    // function
     }
 
     public final String name;
     public final Kind kind;
-    public final Struct type;
+    public Struct type;
     public int val; // Con: constant value
     public int adr; // Var, ValPar, VarPar, Field, Proc: address
     public int level;// Var: 0 = global, 1 = local
