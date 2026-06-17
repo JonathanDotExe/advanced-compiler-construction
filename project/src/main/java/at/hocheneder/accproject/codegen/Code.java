@@ -16,9 +16,14 @@ public abstract class Code {
         assembly = new StringBuilder();
     }
 
-    protected void emit(byte b) {
-        code[pos] = b;
+    protected void emit(int b) {
+        code[pos] = (byte) b;
         pos += 1;
+    }
+
+    protected void emit2(int b) {
+        emit((byte) b);
+        emit((byte) (b >> 8));
     }
 
     private void emitInstruction(byte b1, byte b2, byte b3, byte b4) {
@@ -34,6 +39,12 @@ public abstract class Code {
                 (byte) ((instr >> 8) & 0xFF),
                 (byte) ((instr >> 16) & 0xFF),
                 (byte) ((instr >> 24) & 0xFF));
+    }
+
+    public void emitConst (int size, int x) {
+        if (size == 1) emit((byte) x);
+        else if (size == 2) emit2(x);
+        else emitInstruction(x);
     }
 
     public void save(String binFileName, String asmFileName) {

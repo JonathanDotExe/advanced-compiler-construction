@@ -2,6 +2,7 @@ package at.hocheneder.accproject.codegen;
 
 import at.hocheneder.accproject.symtab.Obj;
 import at.hocheneder.accproject.symtab.SymbolTable;
+import at.hocheneder.accproject.symtab.op.MathOp;
 import at.hocheneder.accproject.symtab.op.Operand;
 
 import java.util.HashSet;
@@ -17,6 +18,17 @@ public class CodeX8664 extends Code {
 
     public static final int NO_REG = -1;
 
+
+    public static final int ADD = 0x00;
+    public static final int ADC = 0x10;
+    public static final int SUB = 0x28;
+    public static final int SBB = 0x18;
+    public static final int AND = 0x20;
+    public static final int OR = 0x08;
+    public static final int XOR = 0x30;
+    public static final int CMP = 0x38;
+
+
     private final Set<Integer> usedRegisters = new HashSet<>();
 
     public final SymbolTable tab;
@@ -27,7 +39,7 @@ public class CodeX8664 extends Code {
 
 
     // Operands
-    Operand varOperand(Obj obj) {
+    public Operand varOperand(Obj obj) {
         //kind = var varpar
         Operand op = new Operand();
         op.type = obj.type;
@@ -79,7 +91,7 @@ public class CodeX8664 extends Code {
      * @param reg - NO_REG meany any
      * @return
      */
-    private Operand regOperand(int reg) {
+    public Operand regOperand(int reg) {
         Operand x = new Operand();
         x.kind = Operand.Kind.Reg;
         x.type = SymbolTable.intType;
@@ -93,7 +105,7 @@ public class CodeX8664 extends Code {
         return x;
     }
 
-    private Operand regRelOperand(int reg, int adr) {
+    public Operand regRelOperand(int reg, int adr) {
         Operand x = new Operand();
         x.kind = Operand.Kind.RegRel;
         x.reg = reg;
@@ -102,7 +114,7 @@ public class CodeX8664 extends Code {
         return x;
     }
 
-    private void freeOperand(Operand op) {
+    public void freeOperand(Operand op) {
         if (op.kind == Operand.Kind.Reg || op.kind == Operand.Kind.RegRel) {
             freeRegister(op.reg);
             op.reg = NO_REG;
@@ -113,21 +125,20 @@ public class CodeX8664 extends Code {
         }
     }
 
-    //Value loading
-    public void load(Operand op) {
-        //TODO
-    }
 
     // Register management
     public int getRegister() {
         int r = NO_REG;
-        if (!usedRegisters.contains(RAX)) { r = RAX; }
-        else if (!usedRegisters.contains(RBX)) { r = RBX; }
+        //if (!usedRegisters.contains(RAX)) { r = RAX; }
+        if (!usedRegisters.contains(RBX)) { r = RBX; }
         else if (!usedRegisters.contains(RDI)) { r = RDI; }
         else if (!usedRegisters.contains(R12)) { r = R12; }
         else {
             throw new RuntimeException("No registers free."); //FIXME
         }
+        System.out.println("Assign register " + registerName(r));
+
+
         usedRegisters.add(r);
         return r;
     }
@@ -136,11 +147,15 @@ public class CodeX8664 extends Code {
         if (usedRegisters.contains(r)) {
             throw new RuntimeException("Register not free."); //FIXME
         }
+        System.out.println("Use register " + registerName(r));
         usedRegisters.add(r);
         return r;
     }
 
     public void freeRegister(int r) {
+        if (r != NO_REG) {
+            System.out.println("Free register " + registerName(r));
+        }
         usedRegisters.remove(r);
     }
 
@@ -149,6 +164,7 @@ public class CodeX8664 extends Code {
     }
 
     public void freeAllRegisters() {
+        System.out.println("Free all registers");
         usedRegisters.clear();
     }
 
@@ -165,8 +181,9 @@ public class CodeX8664 extends Code {
     }
 
     // Emit code
-    void emitOpds(int reg, Operand x) {
-        //----- put modrm byte
+    void emitOperands(int reg, Operand x) {
+
+        //----- emit modrm byte
         int rm, mod;
         if (x.inx == NO_REG) {
             switch (x.kind) {
@@ -195,18 +212,18 @@ public class CodeX8664 extends Code {
             rm = 4;
             if (x.kind == Operand.Kind.RegRel) {
                 mod = mod(x.adr);
-            } else { // x.kind == Opd.Abs
+            } else { // x.kind == Operand.Abs
                 mod = 0;
                 x.reg = RBP;
             }
         }
         emit((byte) ((mod << 6) + (reg << 3) + rm));
 
-        //----- put SIB byte
+        //----- emit SIB byte
         if (x.inx != NO_REG) {
             emit((byte) ((x.scale << 6) + (x.inx << 3) + x.reg));
         }
-        //----- put displacement
+        //----- emit displacement
         if (mod == 0 && rm == 5) emitInstruction(x.adr); // absolute address
         else if (mod == 0 && rm == 4 && x.reg == RBP) emitInstruction(x.adr); // absolute indexed
         else if (mod == 1) emit((byte) x.adr);
@@ -216,13 +233,167 @@ public class CodeX8664 extends Code {
         //TODO refactor to use existing emit methods
     }
 
+    public void emitMOV(Operand x, Operand y) { // MOV x, y
+        assert x.type.size() == y.type.size();
+        int sizeFlag = emitPrefix(x);
+        if (y.kind == Operand.Kind.Con) {
+            if (x.kind == Operand.Kind.Reg) { // r := imm
+                emitInstruction(0xB0 + (sizeFlag << 3) + x.reg);
+                emitConst(y.type.size(), y.val);
+            } else { // m := imm
+                emitInstruction(0xC6 + sizeFlag);
+                emitOperands(0, x);
+                emitConst(y.type.size(), y.val);
+            }
+        } else if (x.kind == Operand.Kind.Reg) { // r := rm
+            emit(0x8A + sizeFlag);
+            emitOperands(x.reg, y);
+        } else if (y.kind == Operand.Kind.Reg) { // rm := r
+            emit(0x88 + sizeFlag);
+            emitOperands(y.reg, x);
+        } else {
+            throw new RuntimeException(); //FIXME
+        };
+    }
+
+    public int emitPrefix (Operand x) {
+        if (x.type.size() == 1) return 0;
+        else if (x.type.size() == 2) { emit(0x66); return 1; }
+        else if (x.type.size() == 4) return 1;
+        else {
+            throw new RuntimeException(); //FIXME
+        }
+    }
+
+    public void emitDyadic (int op, Operand x, Operand y) {
+        int sf = emitPrefix(x);
+        if (x.kind == Operand.Kind.Reg && x.reg == RAX && y.kind == Operand.Kind.Con && x.type.size() == y.type.size()) {
+        // EAX := EAX op imm
+            emit(op + 4 + sf); emitConst(y.type.size(), y.val);
+        } else if (y.kind == Operand.Kind.Con) {
+            if (x.type.size() > 1 && -128 <= y.val && y.val <= 127) { // rm := rm op signextend(imm8)
+                emit(0x82 + sf); emitOperands(op/8, x); emitConst(1, y.val);
+            } else if (x.type.size() == y.type.size()) { // rm := rm op imm
+                emit(0x80 + sf); emitOperands(op/8, x); emitConst(y.type.size(), y.val);
+            } else {
+                throw new RuntimeException(); //FIXME
+            }
+        } else if (x.kind == Operand.Kind.Reg) { // r := r op rm
+            emit(op + 2 + sf);
+            emitOperands(x.reg, y);
+        } else if (y.kind == Operand.Kind.Reg) { // rm := rm op r
+            emit(op + sf);
+            emitOperands(y.reg, x);
+        } else {
+            throw new RuntimeException(); //FIXME
+        }
+        freeOperand(y);
+    }
+
+    public void load (Operand x) {
+        Operand r = null; // destination register
+        switch (x.kind) {
+            case Reg:
+                return;
+            case RegRel:
+                if (x.reg == RBP)
+                    r = regOperand(NO_REG);
+                else
+                    r = regOperand(x.reg);
+                r.type = x.type;
+                emitMOV(r, x);
+                freeRegister(x.inx);
+                break;
+            case Con:
+            case Abs:
+                r = regOperand(NO_REG); r.type = x.type;
+                emitMOV(r, x);
+                freeRegister(x.inx);
+                break;
+            default:
+                throw new RuntimeException(); //FIXME
+        }
+        x.kind = Operand.Kind.Reg;
+        x.reg = r.reg;
+        x.adr = 0;
+        x.inx = NO_REG;
+    }
+
+    public void genOp (MathOp op, Operand x, Operand y) {
+        if (x.kind == Operand.Kind.Con && y.kind == Operand.Kind.Con) {
+            switch(op) {
+                case Plus: x.val += y.val; break;
+                case Minus: x.val -= y.val; break;
+                case Times: x.val *= y.val; break;
+                case Divide: x.val /= y.val; break;
+                case Modulo: x.val /= y.val; break;
+            }
+        } else {
+            load(x);
+            switch(op) {
+                case Plus: emitDyadic(ADD, x, y); break;
+                case Minus: emitDyadic(SUB, x, y); break;
+                default:
+                    throw new RuntimeException("Not yet implemented"); //FIXME
+            }
+        }
+    }
+
+    /*public void loadAdr(Operand x) {
+        if (x.kind == Operand.Kind.RegRel && x.adr == 0 && x.inx == NO_REG) {
+            x.kind = Operand.Kind.Reg;
+        } else if (x.kind == Operand.Kind.RegRel || x.kind == Operand.Kind.Abs) {
+            Operand r;
+            if (x.kind == Operand.Kind.Abs || x.reg == RBP)
+                r = regOperand(NO_REG);
+            else // x.kind == Operand.RegRel && x.reg != EBP
+                r = regOperand(x.reg);
+            emitLEA(r, x);
+            freeRegister(x.inx);
+            x.kind = Operand.Kind.Reg;
+            x.reg = r.reg;
+            x.adr = 0;
+            x.inx = NO_REG;
+        } else {
+            throw new RuntimeException(); //FIXME
+        }
+    }
+
+    public void emitLEA(Operand x, Operand y) { // MOV x, y
+        assert x.type.size() == y.type.size();
+        int sizeFlag = emitPrefix(x);
+        if (y.kind == Operand.Kind.Con) {
+            if (x.kind == Operand.Kind.Reg) { // r := imm
+                emitInstruction(0xB0 + (sizeFlag << 3) + x.reg);
+                emitConst(y.type.size(), y.val);
+            } else { // m := imm
+                emitInstruction(0xC6 + sizeFlag);
+                emitOperands(0, x);
+                emitConst(y.type.size(), y.val);
+            }
+        } else if (x.kind == Operand.Kind.Reg) { // r := rm
+            emit(0x8A + sizeFlag);
+            emitOperands(x.reg, y);
+        } else if (y.kind == Operand.Kind.Reg) { // rm := r
+            emit(0x88 + sizeFlag);
+            emitOperands(y.reg, x);
+        } else {
+            throw new RuntimeException(); //FIXME
+        };
+    }*/
+
     public int mod(int n) {
         if (n == 0) return 0;
         else if (n >= -128 && n < 127) return 1;
         else return 2;
     }
 
-	public void emitMoveImmediate(int register, byte imm) {
+    public void putNEG(Operand x) {
+        //TODO
+
+    }
+
+	/*public void emitMoveImmediate(int register, byte imm) {
 		assembly.append("mov ").append(registerName(register)).append(", ").append(imm).append("\n");
 
         int signExtended = imm; // Java sign-extends byte → int automatically
@@ -323,5 +494,5 @@ public class CodeX8664 extends Code {
     public void emitReturn() {
         assembly.append("ret\n");
         emit((byte) 0xC3);
-    }
+    }*/
 }

@@ -4,8 +4,7 @@ import at.hocheneder.accproject.codegen.CodeX8664;
 import at.hocheneder.accproject.symtab.Obj;
 import at.hocheneder.accproject.symtab.Struct;
 import at.hocheneder.accproject.symtab.SymbolTable;
-import at.hocheneder.accproject.symtab.op.AddOp;
-import at.hocheneder.accproject.symtab.op.MulOp;
+import at.hocheneder.accproject.symtab.op.MathOp;
 import at.hocheneder.accproject.symtab.op.Operand;
 import at.hocheneder.accproject.symtab.op.RelOp;
 
@@ -171,9 +170,22 @@ public class Parser {
 		Expect(TOKEN_RPAREN);
 		if (la.kind == TOKEN_COLON) {
 			Get();
-			return Type();
+			return FuncType();
 		}
 		return SymbolTable.noType;
+	}
+
+	Struct FuncType() {
+		Expect(TOKEN_IDENT);
+		if ("void".equals(t.val)) {
+			return SymbolTable.noType;
+		}
+
+		Obj obj = tab.find(t.val);
+		if (obj == null || obj.kind != Obj.Kind.Type) {
+			throw new RuntimeException("Type not found"); //FIXME
+		}
+		return obj.type;
 	}
 
 	void StatSeq() {
@@ -195,10 +207,22 @@ public class Parser {
 	void Statement() {
 		if (la.kind == TOKEN_IDENT) {
 			Get();
+			Obj obj = tab.find(t.val);
+			if (obj == null) {
+				throw new RuntimeException("identifier not found"); //FIXME
+			}
+			Operand x = code.varOperand(obj);
 			if (la.kind == TOKEN_EQUALS) {
 				//Assignment
 				Get();
-				Operand x = Expression();
+				Operand y = Expression();
+				if (x.type != y.type) {
+					throw new RuntimeException("Type mismatch"); //FIXME
+				}
+				code.load(y);
+				code.emitMOV(x, y);
+				code.freeAllRegisters();
+				System.out.println("Assignment done");
 			} else if (la.kind == TOKEN_LPAREN) {
 				//Function call
 				ActParameters();
@@ -249,26 +273,42 @@ public class Parser {
 
 	Operand Expression() {
 		Operand x;
-		AddOp sign = AddOp.Plus;
+		MathOp sign = MathOp.Plus;
 		if (la.kind == TOKEN_PLUS || la.kind == TOKEN_MINUS) {
 			sign = Addop();
 		}
 		x = Term();
+		if (sign != MathOp.Plus) { //
+			if (x.type == SymbolTable.intType) {
+				if (x.kind == Operand.Kind.Con) {
+					x.val = -x.val;
+				}
+				else {
+					code.putNEG(x);
+				}
+			}
+		}
 		while (la.kind == TOKEN_PLUS || la.kind == TOKEN_MINUS) {
-			AddOp op = Addop();
+			MathOp op = Addop();
 			Operand y = Term();
+			if (x.type == SymbolTable.intType && y.type == SymbolTable.intType) {
+				code.genOp(op, x, y);
+			}
+			else {
+				throw new RuntimeException("Invalid type"); //TODO
+			}
 		}
 		return x;
 	}
 
-	AddOp Addop() {
-		AddOp op = null;
+	MathOp Addop() {
+		MathOp op = null;
 		if (la.kind == TOKEN_PLUS) {
 			Get();
-			op = AddOp.Plus;
+			op = MathOp.Plus;
 		} else if (la.kind == TOKEN_MINUS) {
 			Get();
-			op = AddOp.Minus;
+			op = MathOp.Minus;
 		} else SynErr(ERROR_INVALID_ADDOP);
 		return op;
 	}
@@ -277,8 +317,14 @@ public class Parser {
 		Operand x;
 		x = Factor();
 		while (la.kind == TOKEN_TIMES || la.kind == TOKEN_DIVIDE || la.kind == TOKEN_MODULO) {
-			MulOp op = Mulop();
+			MathOp op = Mulop();
 			Operand y = Factor();
+			if (x.type == SymbolTable.intType && y.type == SymbolTable.intType) {
+				code.genOp(op, x, y);
+			}
+			else {
+				throw new RuntimeException("invalid type"); //FIXME
+			}
 		}
 		return x;
 	}
@@ -345,17 +391,28 @@ public class Parser {
 		Operand x = null;
 		if (la.kind == TOKEN_IDENT) {
 			Get();
+			Obj obj = tab.find(t.val);
+			if (obj == null) {
+				throw new RuntimeException("Not found"); //FIXME
+			}
+			x = code.varOperand(obj);
 
 			if (la.kind == TOKEN_LPAREN) {
+				// Method call
 				ActParameters();
+
+				//TODO operand
 			}
 		} else if (la.kind == TOKEN_NUMBER) {
+			// Integer const
 			Get();
 			x = new Operand(Integer.parseInt(t.val));
 		} else if (la.kind == TOKEN_CHARCON) {
+			// Char Const
 			Get();
 			x = new Operand(t.val.charAt(0));
 		} else if (la.kind == TOKEN_LPAREN) {
+			//Other expression
 			Get();
 			x = Expression();
 			Expect(TOKEN_RPAREN);
@@ -363,17 +420,17 @@ public class Parser {
 		return x;
 	}
 
-	MulOp Mulop() {
-		MulOp op = null;
+	MathOp Mulop() {
+		MathOp op = null;
 		if (la.kind == TOKEN_TIMES) {
 			Get();
-			op = MulOp.Times;
+			op = MathOp.Times;
 		} else if (la.kind == TOKEN_DIVIDE) {
 			Get();
-			op = MulOp.Divide;
+			op = MathOp.Divide;
 		} else if (la.kind == TOKEN_MODULO) {
 			Get();
-			op = MulOp.Modulo;
+			op = MathOp.Modulo;
 		} else SynErr(ERROR_INVALID_MULOP);
 		return op;
 	}

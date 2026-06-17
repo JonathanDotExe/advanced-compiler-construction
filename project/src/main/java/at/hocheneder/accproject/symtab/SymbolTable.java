@@ -3,9 +3,9 @@ package at.hocheneder.accproject.symtab;
 public class SymbolTable {
 
     // predefined objects and types
-    public static final Struct noType = new Struct(Struct.Kind.None);
-    public static final Struct intType = new Struct(Struct.Kind.Int);
-    public static final Struct charType = new Struct(Struct.Kind.Char);
+    public static final Struct noType = new Struct(Struct.Kind.None, 0);
+    public static final Struct intType = new Struct(Struct.Kind.Int, 4);
+    public static final Struct charType = new Struct(Struct.Kind.Char, 1);
     public final Obj noObj = new Obj("noObj", Obj.Kind.Var, noType);
 
     public final Obj chrObj;
