@@ -11,8 +11,9 @@ public class Operand {
         Reg,    // register
         RegRel, // adress relative to register value
         Fun,
-        Cond;
-    };
+        Cond
+    }
+
     public Kind kind; // Con, Abs, Reg, RegRel, Fun, Cond
     public Struct type;
     public int val; // Con: constant value

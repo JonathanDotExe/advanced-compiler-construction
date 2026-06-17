@@ -225,7 +225,7 @@ public class CodeX8664 extends Code {
 	public void emitMoveImmediate(int register, byte imm) {
 		assembly.append("mov ").append(registerName(register)).append(", ").append(imm).append("\n");
 
-        int signExtended = (int) imm; // Java sign-extends byte → int automatically
+        int signExtended = imm; // Java sign-extends byte → int automatically
         byte opcode      = (byte) (0xB8 | (register & 0x7));
         byte immByte0    = (byte)  (signExtended         & 0xFF);
         byte immByte1    = (byte) ((signExtended >>  8)  & 0xFF);

@@ -32,10 +32,10 @@ public class Parser {
 	private Token la;   // lookahead token
 	int errDist = minErrDist;
 
-	private Scanner scanner;
+	private final Scanner scanner;
 
-	private CodeX8664 code;
-	private Errors errors;
+	private final CodeX8664 code;
+	private final Errors errors;
 
 	public Parser(Scanner scanner, CodeX8664 code) {
 		this.scanner = scanner;
@@ -415,7 +415,7 @@ class Errors {
 		}
 		pos = b.indexOf("{2}");
 		if (pos >= 0) b.replace(pos, pos + 3, msg);
-		errorStream.println(b.toString());
+		errorStream.println(b);
 	}
 
 	public void SynErr(int line, int col, int n) {

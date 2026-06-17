@@ -262,7 +262,7 @@ class StartStates {
 		public Elem(int key, int val) { this.key = key; this.val = val; }
 	}
 
-	private Elem[] tab = new Elem[128];
+	private final Elem[] tab = new Elem[128];
 
 	public void set(int key, int val) {
 		Elem e = new Elem(key, val);
