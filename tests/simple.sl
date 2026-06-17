@@ -4,12 +4,12 @@ fn main(): void {
     var j: int;
     var s: int;
 
-    i = 2;
-    j = 3;
+    i = 60;
+    j = 7;
 
     s = i + j;
     
 
-    putInt(s);
+    put(s);
     putLn();
 }

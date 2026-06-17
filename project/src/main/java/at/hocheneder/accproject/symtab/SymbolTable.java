@@ -30,7 +30,7 @@ public class SymbolTable {
         insert("char", Obj.Kind.Type, charType);
 
         //CHR
-        chrObj = new Obj("CHR", Obj.Kind.Proc, charType);
+        chrObj = insert("CHR", Obj.Kind.Proc, charType);
         openScope();
         Obj iVarObj = insert("i", Obj.Kind.Var, intType);
         iVarObj.level = 1;
@@ -40,7 +40,7 @@ public class SymbolTable {
         closeScope();
 
         //Ord
-        ordObj = new Obj("ORD", Obj.Kind.Proc, intType);
+        ordObj = insert("ORD", Obj.Kind.Proc, intType);
         openScope();
         Obj chVarObj = insert("ch", Obj.Kind.Var, charType);
         chVarObj.level = 1;
@@ -50,7 +50,7 @@ public class SymbolTable {
         closeScope();
 
         //Put
-        putObj = new Obj("put", Obj.Kind.Proc, noType);
+        putObj = insert("put", Obj.Kind.Proc, noType);
         openScope();
         Obj eVarObj = insert("e", Obj.Kind.Var, charType);
         eVarObj.level = 1;
@@ -60,7 +60,7 @@ public class SymbolTable {
         closeScope();
 
         //Put ln
-        putLnObj = new Obj("putLn", Obj.Kind.Proc, noType);
+        putLnObj = insert("putLn", Obj.Kind.Proc, noType);
         openScope();
         putLnObj.nPars = curScope.nVars();
         putLnObj.nVars = curScope.nVars();
@@ -91,7 +91,7 @@ public class SymbolTable {
         if (obj != null) {
             return obj;
         }
-        throw new RuntimeException("Name not found."); //FIXME
+        throw new RuntimeException("Name not found: " + name); //FIXME
     }
     //public Obj findField (String name, Struct recType) {}
 

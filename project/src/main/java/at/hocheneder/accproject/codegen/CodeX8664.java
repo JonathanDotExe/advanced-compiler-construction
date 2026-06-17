@@ -51,31 +51,11 @@ public class CodeX8664 extends Code {
         }
         else { //local
             op.kind = Operand.Kind.RegRel;
-            op.reg = base(tab.getCurLevel() - obj.level);
+            op.reg = RBP;
             op.adr = obj.adr;
             op.inx = NO_REG;
         }
         return op;
-    }
-
-    private int base(int d) {
-        if (d == 0)
-            return RBP;
-        Operand sl = new Operand(); //follow static/lexical link
-        sl.kind = Operand.Kind.RegRel;
-        sl.reg = RBP;
-        sl.adr = 8;
-        sl.inx = NO_REG;
-        sl.type = SymbolTable.intType;
-
-        while (d > 0) {
-            load(sl);
-            sl.kind = Operand.Kind.RegRel;
-            sl.adr = 8;
-            d--;
-        }
-
-        return sl.reg;
     }
 
     private Operand conOperand(int val) {
